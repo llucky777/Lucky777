@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>LUCKY 777 - LIVE RESULTS</title>
+    <title>LUCKY 777 - RESULTS</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* CSS EKDOM SIMPLE AUR CLEAN */
         body { 
-            background-color: #4a0000; /* Outer Background */
+            background-color: #4a0000; 
             margin: 0; 
             padding: 0; 
             font-family: Arial, Helvetica, sans-serif;
@@ -18,17 +17,15 @@
             justify-content: center;
         }
 
-        /* 🔥 Main Container - Jo Zoom aur Scroll hoga */
         .main-wrapper {
             width: 100%;
-            max-width: 600px; /* Thoda wide rakha hai */
-            background-color: #7a0000; /* Inner Background */
+            max-width: 500px; 
+            background-color: #7a0000; 
             min-height: 100vh;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
             padding-bottom: 50px;
         }
 
-        /* Header (Gold & Black) */
         .header {
             background: #000;
             padding: 20px 10px;
@@ -36,7 +33,7 @@
             border-bottom: 4px solid #ffd700;
         }
         .logo {
-            font-size: 40px;
+            font-size: 35px;
             color: #ffd700;
             font-weight: 900;
             margin: 0;
@@ -44,7 +41,6 @@
             letter-spacing: 2px;
         }
 
-        /* Timer Box */
         .timer-section {
             background: #111;
             margin: 15px;
@@ -54,17 +50,16 @@
             text-align: center;
         }
         .next-label { color: #aaa; font-size: 12px; font-weight: bold; }
-        #nextTimeDisplay { color: #fff; font-size: 28px; font-weight: 900; display: block; margin-top: 5px; }
+        #nextTimeDisplay { color: #fff; font-size: 26px; font-weight: 900; display: block; margin-top: 5px; }
 
-        /* Search Section */
         .search-area {
             text-align: center;
             padding: 10px;
             background: rgba(0,0,0,0.2);
         }
         input[type="date"] {
-            padding: 10px;
-            font-size: 16px;
+            padding: 8px;
+            font-size: 14px;
             border-radius: 4px;
             border: none;
             font-weight: bold;
@@ -72,22 +67,16 @@
         .search-btn {
             background: #ffd700;
             color: #000;
-            padding: 10px 20px;
+            padding: 8px 15px;
             border: none;
             border-radius: 4px;
             font-weight: 900;
             cursor: pointer;
-            margin-left: 5px;
         }
 
-        /* 🔥 Result Table - Fixed Width taaki Zoom kaam kare */
-        .table-container {
-            padding: 10px;
-            overflow-x: auto; /* Side scroll bhi chalega */
-        }
+        .table-container { padding: 10px; }
         .result-table {
             width: 100%;
-            min-width: 550px; /* Table ko failaya hai taaki slots saaf dikhein */
             border-collapse: collapse;
             background: #fff;
             color: #000;
@@ -96,21 +85,20 @@
         .result-table th {
             background: #ffd700;
             color: #000;
-            padding: 15px 5px;
+            padding: 12px 5px;
             font-size: 14px;
             border: 1px solid #000;
         }
         .result-table td {
             border: 1px solid #ccc;
-            padding: 15px 5px;
-            font-size: 22px;
+            padding: 12px 5px;
+            font-size: 20px;
             font-weight: 900;
         }
         .time-col {
             background: #8b0000;
             color: #fff !important;
-            width: 120px;
-            font-size: 16px !important;
+            width: 100px;
         }
 
         footer {
@@ -127,7 +115,7 @@
 <div class="main-wrapper">
     <div class="header">
         <h1 class="logo">LUCKY 777</h1>
-        <div style="color: #fff; font-size: 12px; margin-top: 5px; font-weight: bold;">LIVE RESULTS PORTAL</div>
+        <div style="color: #fff; font-size: 11px; margin-top: 5px; font-weight: bold;">LIVE RESULTS PORTAL</div>
     </div>
 
     <div class="timer-section">
@@ -146,15 +134,9 @@
                 <tr>
                     <th class="time-col">TIME</th>
                     <th>A</th>
-                    <th>B</th>
+                    <th>	B</th>
                     <th>C</th>
                     <th>D</th>
-                    <th>E</th>
-                    <th>F</th>
-                    <th>G</th>
-                    <th>H</th>
-                    <th>I</th>
-                    <th>J</th>
                 </tr>
             </thead>
             <tbody id="resultBody">
@@ -168,7 +150,6 @@
 </div>
 
 <script>
-    // Config Linked to your Lucky-777-Official
     const firebaseConfig = {
         apiKey: "AIzaSyC7npaib3bcOy5rHCAduQnizEQ2BIe53no",
         authDomain: "lucky-777-official.firebaseapp.com",
@@ -186,7 +167,7 @@
         database.ref('results/' + targetDate).on('value', (snapshot) => {
             const data = snapshot.val();
             if(!data) {
-                resultBody.innerHTML = "<tr><td colspan='11' style='padding:50px; color:#999; background:#fff;'>NO RESULTS FOUND</td></tr>";
+                resultBody.innerHTML = "<tr><td colspan='5' style='padding:40px; color:#999; background:#fff;'>NO RESULTS FOUND</td></tr>";
                 return;
             }
             
@@ -197,16 +178,21 @@
             times.forEach(resTime => {
                 const resDateTime = new Date(`${targetDate} ${resTime}`);
 
+                // Scheduled Posting Filter: Time hone par hi dikhayega
                 if (now >= resDateTime) {
                     let row = `<tr><td class="time-col">${resTime}</td>`;
                     const timeNums = data[resTime].numbers || [];
-                    for(let i=0; i<10; i++){
+                    for(let i=0; i<4; i++){ // Sirf 4 slots (A, B, C, D)
                         row += `<td>${timeNums[i] || '--'}</td>`;
                     }
                     row += `</tr>`;
                     resultBody.innerHTML += row;
                 }
             });
+
+            if(resultBody.innerHTML === "") {
+                 resultBody.innerHTML = "<tr><td colspan='5' style='padding:40px; color:#999; background:#fff;'>WAITING FOR TIME...</td></tr>";
+            }
         });
     }
 
@@ -225,6 +211,7 @@
     window.onload = () => {
         startLiveUpdates();
         syncAdminTime();
+        // Har 30 second mein live refresh bina page refresh kiye
         setInterval(() => {
             if(!document.getElementById('searchDate').value) startLiveUpdates();
         }, 30000);
