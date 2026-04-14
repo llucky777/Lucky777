@@ -7,7 +7,7 @@
     <meta name="google-site-verification" content="aa616cbe8a69b1ed" />
 
     <title>llucky777.github.io - LUCKY 777 LIVE</title>
-    <meta name="description" content="LUCKY 777 Official Portal. Fast live results for ABCD slots every 15 minutes.">
+    <meta name="description" content="LUCKY 777 Official Portal. Fast live results for ABCD slots every 15 minutes. Accurate and reliable.">
     
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -71,7 +71,7 @@
     </div>
 
     <footer>
-        <p>&copy; 2026 llucky777.github.io | Official Portal</p>
+        <p>&copy; 2026 llucky777.github.io | Official Results Portal</p>
     </footer>
 </div>
 
@@ -92,7 +92,11 @@
 
     function updateSystemDate() {
         const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
+
         if (todayStr !== currentSystemDate) {
             currentSystemDate = todayStr;
             const options = { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' };
@@ -103,13 +107,13 @@
 
     // 🔥 AUTOMATIC 15-MIN SCHEDULER
     function autoScheduler() {
-        if(isManualTimer) return; // Agar admin se set hai toh auto nahi chalega
+        if(isManualTimer) return; 
 
         const now = new Date();
         const currentHour = now.getHours();
         const currentMinute = now.getMinutes();
 
-        // Check if within 9 AM to 9 PM
+        // Subah 9 AM se Raat 9 PM tak (15 minute interval)
         if (currentHour >= 9 && currentHour < 21) {
             let nextMin = Math.ceil((currentMinute + 1) / 15) * 15;
             let nextHour = currentHour;
@@ -120,13 +124,19 @@
             }
 
             const period = nextHour >= 12 ? "PM" : "AM";
-            const displayHour = nextHour % 12 || 12;
+            let displayHour = nextHour % 12;
+            displayHour = displayHour ? displayHour : 12; 
+            
             const targetStr = `${displayHour < 10 ? '0'+displayHour : displayHour}:${nextMin < 10 ? '0'+nextMin : nextMin} ${period}`;
             
             startCountdown(targetStr, currentSystemDate);
+            document.getElementById('timerLabel').innerText = "NEXT RESULT COUNTDOWN";
         } else {
+            // Market Close Status
             document.getElementById('countdownDisplay').innerText = "CLOSED";
+            document.getElementById('countdownDisplay').style.color = "#ff3131";
             document.getElementById('nextTimeTarget').innerText = "OPENS AT 09:00 AM";
+            document.getElementById('timerLabel').innerText = "MARKET STATUS";
         }
     }
 
@@ -176,7 +186,7 @@
                 clearInterval(timerInterval);
                 display.innerText = "CHECK NOW!";
                 display.style.color = "#39ff14";
-                // 15 sec baad auto-check agla timer
+                // Agla auto timer 15 sec baad check karega
                 setTimeout(autoScheduler, 15000);
                 return;
             }
@@ -193,7 +203,7 @@
     function syncAdminTime() {
         database.ref('app_settings/lucky777').on('value', (snap) => {
             const data = snap.val();
-            // Agar Admin mein koi future date/time hai toh wahi dikhao
+            // Agar Admin mein koi data hai toh wo manual timer chalayega
             if(data && data.nextResultTime) {
                 isManualTimer = true;
                 startCountdown(data.nextResultTime, data.nextResultDate || currentSystemDate);
