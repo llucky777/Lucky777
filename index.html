@@ -3,106 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LUCKY 777 - Results</title>
+    <title>LUCKY 777 - LIVE</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* General Styling - Simple & Clean */
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Roboto:wght@400;900&display=swap');
+        
         body { 
-            background-color: #f4f4f4; 
-            color: #333; 
-            font-family: Arial, sans-serif; 
+            background-color: #4a0000; 
+            color: white; 
+            font-family: 'Roboto', sans-serif; 
             margin: 0; 
             padding: 0; 
             display: flex; 
             justify-content: center; 
         }
+        
         .app-container { 
             width: 100%; 
-            max-width: 500px; 
-            background: #ffffff; 
+            max-width: 500px; /* Thoda wide kiya slots ke liye */
+            background: #7a0000; 
             min-height: 100vh; 
-            box-shadow: 0 0 10px rgba(0,0,0,0.1); 
+            box-shadow: 0 0 20px rgba(0,0,0,0.5); 
         }
 
-        /* Standard Header */
+        /* 👑 Premium Header (Gold & Black) */
         .header { 
-            background: #2c3e50; 
-            color: white; 
-            padding: 20px 10px; 
-            text-align: center; 
-            border-bottom: 4px solid #e74c3c;
-        }
-        .logo-text { font-size: 28px; margin: 0; letter-spacing: 1px; }
-        .sub-text { font-size: 12px; margin-top: 5px; opacity: 0.9; }
-
-        /* Next Result Info */
-        .timer-box { 
-            background: #ecf0f1; 
+            background: #000; 
             padding: 15px; 
-            margin: 15px; 
-            border-radius: 5px; 
+            border-bottom: 3px solid #ffd700; 
             text-align: center; 
-            border: 1px solid #bdc3c7;
         }
-        .next-label { font-size: 13px; color: #7f8c8d; font-weight: bold; }
-        #nextTimeDisplay { font-size: 22px; color: #c0392b; font-weight: bold; display: block; margin-top: 5px; }
+        .logo-text { 
+            font-family: 'Oswald', sans-serif; 
+            font-size: 35px; 
+            color: #ffd700; 
+            margin: 0; 
+            letter-spacing: 2px; 
+            text-shadow: 2px 2px #5c0000; 
+        }
+        .sub-text { font-size: 11px; color: #fff; text-transform: uppercase; margin-top: 2px; font-weight: bold; }
 
-        /* Search Section */
+        /* ⏰ Next Result Box */
+        .timer-box { 
+            background: #111; 
+            color: #ffd700; 
+            padding: 15px; 
+            margin: 15px 10px; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            border: 1px solid #ffd700; 
+            text-align: center; 
+        }
+        #nextTimeDisplay { font-size: 26px; color: #fff; font-family: 'Oswald', sans-serif; }
+
+        /* 🔍 Search Section */
         .search-section { 
             padding: 10px; 
             display: flex; 
-            gap: 10px; 
+            gap: 8px; 
             justify-content: center; 
-            background: #fff;
+            align-items: center; 
         }
         input[type="date"] { 
             padding: 8px; 
-            border: 1px solid #ccc; 
-            border-radius: 4px; 
+            border-radius: 5px; 
+            border: none; 
             font-size: 14px; 
+            width: 140px; 
+            font-weight: bold; 
         }
         .search-btn { 
-            background: #2980b9; 
-            color: white; 
+            background: #ffd700; 
+            color: #000; 
             border: none; 
-            padding: 8px 15px; 
-            border-radius: 4px; 
+            padding: 8px 20px; 
+            font-weight: 900; 
             cursor: pointer; 
-            font-weight: bold;
+            border-radius: 5px; 
+            text-transform: uppercase; 
         }
 
-        /* Result Table - Simple Style */
-        .table-wrapper { padding: 10px; }
+        /* 📊 Premium 10-Slot Table (Gold Header) */
+        .table-wrapper { 
+            padding: 10px; 
+            overflow-x: auto; /* Chhote phone par scroll ke liye */
+        }
         .result-table { 
             width: 100%; 
             border-collapse: collapse; 
-            margin-top: 10px;
-            font-size: 16px;
+            background: #fff; 
+            color: #000; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            min-width: 450px; /* Slots daba na dikhein */
         }
         .result-table th { 
-            background: #34495e; 
-            color: white; 
-            padding: 12px 5px; 
-            text-align: center;
-            border: 1px solid #2c3e50;
+            background: #ffd700; /* 🟡 Gold Header (Screenshot jaisa) */
+            color: #000; 
+            padding: 12px 3px; 
+            font-size: 12px; 
+            border: 1px solid #c9a500; 
+            text-transform: uppercase;
         }
         .result-table td { 
-            border: 1px solid #ddd; 
-            padding: 12px 5px; 
+            border: 1px solid #eee; 
+            padding: 12px 3px; 
+            font-weight: 900; 
             text-align: center; 
-            font-weight: bold;
-            color: #2c3e50;
+            font-size: 16px; /* 10 slots hain, font chhota zaroori hai */
         }
-        .time-col { background: #f9f9f9; width: 100px; color: #e74c3c !important; }
+        .time-col { 
+            background: #8b0000; /* 🔴 Red Time Col (Screenshot jaisa) */
+            color: #fff !important; 
+            width: 75px; 
+            font-family: 'Oswald', sans-serif; 
+            font-size: 13px !important; 
+        }
 
         footer { 
-            padding: 20px; 
+            padding: 30px; 
             text-align: center; 
             font-size: 12px; 
-            color: #95a5a6; 
-            border-top: 1px solid #eee;
-            margin-top: 20px;
+            font-weight: bold; 
+            opacity: 0.8; 
+            border-top: 1px solid rgba(255,215,0,0.2); 
+            margin-top: 20px; 
         }
     </style>
 </head>
@@ -111,28 +138,34 @@
 <div class="app-container">
     <div class="header">
         <h1 class="logo-text">LUCKY 777</h1>
-        <p class="sub-text">Official Results Portal</p>
+        <p class="sub-text">FASTEST LIVE RESULTS PORTAL</p>
     </div>
 
     <div class="timer-box">
-        <span class="next-label">NEXT RESULT SCHEDULED AT</span>
+        <span style="font-size: 12px; display: block; margin-bottom: 5px; color: #aaa;">NEXT RESULT AT</span>
         <span id="nextTimeDisplay">LOADING...</span>
     </div>
 
     <div class="search-section">
         <input type="date" id="searchDate">
-        <button class="search-btn" onclick="searchResult()">View Results</button>
+        <button class="search-btn" onclick="searchResult()">SEARCH</button>
     </div>
 
     <div class="table-wrapper">
         <table class="result-table">
             <thead>
                 <tr>
-                    <th>TIME</th>
+                    <th class="time-col">TIME</th>
                     <th>A</th>
                     <th>B</th>
                     <th>C</th>
                     <th>D</th>
+                    <th>E</th>
+                    <th>F</th>
+                    <th>G</th>
+                    <th>H</th>
+                    <th>I</th>
+                    <th>J</th>
                 </tr>
             </thead>
             <tbody id="resultBody">
@@ -141,7 +174,7 @@
     </div>
 
     <footer>
-        <p>&copy; 2026 LUCKY 777 Portal. All rights reserved.</p>
+        <p>&copy; 2026 LUCKY 777 | Results for Entertainment</p>
     </footer>
 </div>
 
@@ -163,7 +196,7 @@
         database.ref('results/' + targetDate).on('value', (snapshot) => {
             const data = snapshot.val();
             if(!data) {
-                resultBody.innerHTML = "<tr><td colspan='5' style='padding:30px; color:#999;'>No results available for this date.</td></tr>";
+                resultBody.innerHTML = "<tr><td colspan='11' style='padding:50px; color:#999; text-align:center;'>NO RESULTS FOUND</td></tr>";
                 return;
             }
             
@@ -174,11 +207,19 @@
 
             times.forEach(resTime => {
                 const resDateTime = new Date(`${targetDate} ${resTime}`);
+
                 if (now >= resDateTime) {
                     hasResults = true;
                     let row = `<tr><td class="time-col">${resTime}</td>`;
                     if(data[resTime].numbers) {
-                        data[resTime].numbers.forEach(num => { row += `<td>${num}</td>`; });
+                        const timeNums = data[resTime].numbers;
+                        // J tak loop chalana (10 slots)
+                        for(let i=0; i<10; i++){
+                            row += `<td>${timeNums[i] || '--'}</td>`; // Agar number nahi hai toh '--'
+                        }
+                    } else {
+                        // Empty row agar numbers missing hain
+                        for(let i=0; i<10; i++){ row += `<td>--</td>`; }
                     }
                     row += `</tr>`;
                     resultBody.innerHTML += row;
@@ -186,20 +227,24 @@
             });
 
             if (!hasResults) {
-                resultBody.innerHTML = "<tr><td colspan='5' style='padding:30px; color:#999;'>New results will appear here shortly.</td></tr>";
+                resultBody.innerHTML = "<tr><td colspan='11' style='padding:50px; color:#999; text-align:center;'>WAITING FOR TIME...</td></tr>";
             }
         });
     }
 
     function syncAdminTime() {
         database.ref('app_settings/lucky777/nextResultTime').on('value', (snap) => {
-            document.getElementById('nextTimeDisplay').innerText = snap.val() || "TO BE ANNOUNCED";
+            if(snap.val()) {
+                document.getElementById('nextTimeDisplay').innerText = snap.val();
+            } else {
+                document.getElementById('nextTimeDisplay').innerText = "TO BE ANNOUNCED";
+            }
         });
     }
 
     function searchResult() {
         const dateInput = document.getElementById('searchDate').value;
-        if(!dateInput) return alert("Please select a date first.");
+        if(!dateInput) return alert("Please select a date!");
         startLiveUpdates(dateInput);
     }
 
