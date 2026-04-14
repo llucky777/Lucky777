@@ -6,11 +6,9 @@
     
     <meta name="google-site-verification" content="aa616cbe8a69b1ed" />
 
-    <title>llucky777.github.io - LUCKY 777 LIVE RESULTS</title>
-    <meta name="description" content="LUCKY 777 Official Portal on llucky777.github.io. Check fast live results for ABCD slots daily. Accurate and reliable results portal.">
-    <meta name="keywords" content="llucky777.github.io, lucky 777, lucky777 github, lucky 777 results, results portal">
-    <meta name="author" content="llucky777">
-
+    <title>llucky777.github.io - LUCKY 777 LIVE</title>
+    <meta name="description" content="LUCKY 777 Official Portal. Fast live results for ABCD slots every 15 minutes.">
+    
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -78,7 +76,6 @@
 </div>
 
 <script>
-    // --- FIREBASE CONFIG ---
     const firebaseConfig = {
         apiKey: "AIzaSyC7npaib3bcOy5rHCAduQnizEQ2BIe53no",
         authDomain: "lucky-777-official.firebaseapp.com",
@@ -91,19 +88,45 @@
 
     let timerInterval;
     let currentSystemDate = "";
+    let isManualTimer = false;
 
     function updateSystemDate() {
         const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const todayStr = `${year}-${month}-${day}`;
-
+        const todayStr = now.toISOString().split('T')[0];
         if (todayStr !== currentSystemDate) {
             currentSystemDate = todayStr;
             const options = { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' };
             document.getElementById('currentDayDisplay').innerText = "TODAY: " + now.toLocaleDateString('en-GB', options);
             if(!document.getElementById('searchDate').value) startLiveUpdates(todayStr);
+        }
+    }
+
+    // 🔥 AUTOMATIC 15-MIN SCHEDULER
+    function autoScheduler() {
+        if(isManualTimer) return; // Agar admin se set hai toh auto nahi chalega
+
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+
+        // Check if within 9 AM to 9 PM
+        if (currentHour >= 9 && currentHour < 21) {
+            let nextMin = Math.ceil((currentMinute + 1) / 15) * 15;
+            let nextHour = currentHour;
+            
+            if (nextMin >= 60) {
+                nextMin = 0;
+                nextHour++;
+            }
+
+            const period = nextHour >= 12 ? "PM" : "AM";
+            const displayHour = nextHour % 12 || 12;
+            const targetStr = `${displayHour < 10 ? '0'+displayHour : displayHour}:${nextMin < 10 ? '0'+nextMin : nextMin} ${period}`;
+            
+            startCountdown(targetStr, currentSystemDate);
+        } else {
+            document.getElementById('countdownDisplay').innerText = "CLOSED";
+            document.getElementById('nextTimeTarget').innerText = "OPENS AT 09:00 AM";
         }
     }
 
@@ -119,11 +142,9 @@
             resultBody.innerHTML = "";
             const times = Object.keys(data).sort().reverse();
             const now = new Date();
-            const isToday = (dateStr === currentSystemDate);
-
             times.forEach(resTime => {
                 const resDateTime = new Date(`${dateStr} ${resTime}`);
-                if (!isToday || now >= resDateTime) {
+                if (dateStr !== currentSystemDate || now >= resDateTime) {
                     let row = `<tr><td class="time-col">${resTime}</td>`;
                     const nums = data[resTime].numbers || [];
                     for(let i=0; i<4; i++) { row += `<td>${nums[i] || '--'}</td>`; }
@@ -136,7 +157,7 @@
 
     function startCountdown(targetTimeStr, targetDateStr) {
         if(timerInterval) clearInterval(timerInterval);
-        document.getElementById('nextTimeTarget').innerText = "TARGET: " + targetDateStr + " " + targetTimeStr;
+        document.getElementById('nextTimeTarget').innerText = "TARGET: " + targetTimeStr;
 
         timerInterval = setInterval(() => {
             const now = new Date();
@@ -155,7 +176,8 @@
                 clearInterval(timerInterval);
                 display.innerText = "CHECK NOW!";
                 display.style.color = "#39ff14";
-                document.getElementById('timerLabel').innerText = "RESULT IS OUT!";
+                // 15 sec baad auto-check agla timer
+                setTimeout(autoScheduler, 15000);
                 return;
             }
 
@@ -164,7 +186,6 @@
             const s = Math.floor((distance % (1000 * 60)) / 1000);
 
             display.style.color = "#fff";
-            document.getElementById('timerLabel').innerText = "NEXT RESULT COUNTDOWN";
             display.innerText = (h<10?"0"+h:h) + ":" + (m<10?"0"+m:m) + ":" + (s<10?"0"+s:s);
         }, 1000);
     }
@@ -172,8 +193,13 @@
     function syncAdminTime() {
         database.ref('app_settings/lucky777').on('value', (snap) => {
             const data = snap.val();
-            if(data && data.nextResultTime && data.nextResultDate) {
-                startCountdown(data.nextResultTime, data.nextResultDate);
+            // Agar Admin mein koi future date/time hai toh wahi dikhao
+            if(data && data.nextResultTime) {
+                isManualTimer = true;
+                startCountdown(data.nextResultTime, data.nextResultDate || currentSystemDate);
+            } else {
+                isManualTimer = false;
+                autoScheduler();
             }
         });
     }
