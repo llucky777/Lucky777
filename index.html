@@ -3,111 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>LUCKY 777 - RESULTS</title>
+    <title>LUCKY 777 - LIVE</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { 
-            background-color: #4a0000; 
-            margin: 0; 
-            padding: 0; 
-            font-family: Arial, Helvetica, sans-serif;
-            display: flex;
-            justify-content: center;
-        }
+        body { background-color: #4a0000; margin: 0; padding: 0; font-family: Arial, sans-serif; display: flex; justify-content: center; }
+        .main-wrapper { width: 100%; max-width: 500px; background-color: #7a0000; min-height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.5); padding-bottom: 50px; }
+        
+        .header { background: #000; padding: 20px 10px; text-align: center; border-bottom: 4px solid #ffd700; }
+        .logo { font-size: 35px; color: #ffd700; font-weight: 900; margin: 0; text-shadow: 2px 2px #000; letter-spacing: 2px; }
 
-        .main-wrapper {
-            width: 100%;
-            max-width: 500px; 
-            background-color: #7a0000; 
-            min-height: 100vh;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            padding-bottom: 50px;
-        }
+        /* 📅 Today's Date Bar */
+        .date-bar { background: #ffd700; color: #000; padding: 10px; text-align: center; font-weight: bold; font-size: 16px; text-transform: uppercase; border-bottom: 2px solid #000; }
 
-        .header {
-            background: #000;
-            padding: 20px 10px;
-            text-align: center;
-            border-bottom: 4px solid #ffd700;
-        }
-        .logo {
-            font-size: 35px;
-            color: #ffd700;
-            font-weight: 900;
-            margin: 0;
-            text-shadow: 2px 2px #000;
-            letter-spacing: 2px;
-        }
+        .timer-section { background: #111; margin: 15px; padding: 20px; border: 2px solid #ffd700; border-radius: 8px; text-align: center; }
+        .next-label { color: #ffd700; font-size: 13px; font-weight: bold; margin-bottom: 10px; display: block; }
+        #countdownDisplay { color: #fff; font-size: 32px; font-weight: 900; font-family: 'Courier New', monospace; display: block; }
+        #nextTimeTarget { color: #aaa; font-size: 12px; margin-top: 8px; display: block; }
 
-        .timer-section {
-            background: #111;
-            margin: 15px;
-            padding: 15px;
-            border: 2px solid #ffd700;
-            border-radius: 5px;
-            text-align: center;
-        }
-        .next-label { color: #aaa; font-size: 12px; font-weight: bold; }
-        #nextTimeDisplay { color: #fff; font-size: 26px; font-weight: 900; display: block; margin-top: 5px; }
-
-        .search-area {
-            text-align: center;
-            padding: 10px;
-            background: rgba(0,0,0,0.2);
-        }
-        input[type="date"] {
-            padding: 8px;
-            font-size: 14px;
-            border-radius: 4px;
-            border: none;
-            font-weight: bold;
-        }
-        .search-btn {
-            background: #ffd700;
-            color: #000;
-            padding: 8px 15px;
-            border: none;
-            border-radius: 4px;
-            font-weight: 900;
-            cursor: pointer;
-        }
+        .search-area { text-align: center; padding: 15px; background: rgba(0,0,0,0.2); }
+        .search-label { color: #fff; font-size: 12px; display: block; margin-bottom: 8px; font-weight: bold; }
+        input[type="date"] { padding: 8px; font-size: 14px; border-radius: 4px; border: none; font-weight: bold; }
+        .search-btn { background: #ffd700; color: #000; padding: 8px 15px; border: none; border-radius: 4px; font-weight: 900; cursor: pointer; }
 
         .table-container { padding: 10px; }
-        .result-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #fff;
-            color: #000;
-            text-align: center;
-        }
-        .result-table th {
-            background: #ffd700;
-            color: #000;
-            padding: 12px 5px;
-            font-size: 14px;
-            border: 1px solid #000;
-        }
-        .result-table td {
-            border: 1px solid #ccc;
-            padding: 12px 5px;
-            font-size: 20px;
-            font-weight: 900;
-        }
-        .time-col {
-            background: #8b0000;
-            color: #fff !important;
-            width: 100px;
-        }
+        .result-table { width: 100%; border-collapse: collapse; background: #fff; color: #000; text-align: center; border-radius: 5px; overflow: hidden; }
+        .result-table th { background: #ffd700; color: #000; padding: 12px 5px; font-size: 14px; border: 1px solid #000; }
+        .result-table td { border: 1px solid #ccc; padding: 12px 5px; font-size: 20px; font-weight: 900; }
+        .time-col { background: #8b0000; color: #fff !important; width: 100px; }
 
-        footer {
-            text-align: center;
-            color: #fff;
-            padding: 40px 10px;
-            font-size: 12px;
-            opacity: 0.7;
-        }
+        footer { text-align: center; color: #fff; padding: 40px 10px; font-size: 12px; opacity: 0.7; }
     </style>
 </head>
 <body>
@@ -118,12 +44,16 @@
         <div style="color: #fff; font-size: 11px; margin-top: 5px; font-weight: bold;">LIVE RESULTS PORTAL</div>
     </div>
 
+    <div class="date-bar" id="currentDayDisplay">TODAY: --/--/----</div>
+
     <div class="timer-section">
-        <span class="next-label">NEXT RESULT TIME</span>
-        <span id="nextTimeDisplay">LOADING...</span>
+        <span class="next-label" id="timerLabel">NEXT RESULT COUNTDOWN</span>
+        <span id="countdownDisplay">00:00:00</span>
+        <span id="nextTimeTarget">TARGET: --:-- --</span>
     </div>
 
     <div class="search-area">
+        <span class="search-label">OLD RESULT DEKHNE KE LIYE TAREEKH CHUNEIN:</span>
         <input type="date" id="searchDate">
         <button class="search-btn" onclick="searchResult()">SEARCH</button>
     </div>
@@ -134,13 +64,12 @@
                 <tr>
                     <th class="time-col">TIME</th>
                     <th>A</th>
-                    <th>	B</th>
+                    <th>B</th>
                     <th>C</th>
                     <th>D</th>
                 </tr>
             </thead>
-            <tbody id="resultBody">
-                </tbody>
+            <tbody id="resultBody"></tbody>
         </table>
     </div>
 
@@ -160,60 +89,114 @@
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    function startLiveUpdates(dateStr = null) {
-        const resultBody = document.getElementById('resultBody');
-        const targetDate = dateStr || new Date().toISOString().split('T')[0];
+    let timerInterval;
+    let currentSystemDate = ""; // Track current date
 
-        database.ref('results/' + targetDate).on('value', (snapshot) => {
+    // 🔥 DATE LOGIC: Raat ke 12 baje check karega
+    function updateSystemDate() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
+
+        // Agar date badal gayi hai
+        if (todayStr !== currentSystemDate) {
+            currentSystemDate = todayStr;
+            const options = { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' };
+            document.getElementById('currentDayDisplay').innerText = "TODAY: " + now.toLocaleDateString('en-GB', options);
+            
+            // Search input khali hai toh naye din ka data load karo
+            const searchInput = document.getElementById('searchDate').value;
+            if(!searchInput) startLiveUpdates(todayStr);
+        }
+    }
+
+    // 🚀 LIVE RESULT LISTENER (Admin data ko filter karega)
+    function startLiveUpdates(dateStr) {
+        const resultBody = document.getElementById('resultBody');
+        database.ref('results/' + dateStr).off(); // Purana listener hatao
+        
+        database.ref('results/' + dateStr).on('value', (snapshot) => {
             const data = snapshot.val();
             if(!data) {
-                resultBody.innerHTML = "<tr><td colspan='5' style='padding:40px; color:#999; background:#fff;'>NO RESULTS FOUND</td></tr>";
+                resultBody.innerHTML = "<tr><td colspan='5' style='padding:40px; color:#999; background:#fff;'>NO RESULTS FOUND FOR THIS DATE</td></tr>";
                 return;
             }
-            
             resultBody.innerHTML = "";
             const times = Object.keys(data).sort().reverse();
             const now = new Date();
+            const isToday = (dateStr === currentSystemDate);
 
             times.forEach(resTime => {
-                const resDateTime = new Date(`${targetDate} ${resTime}`);
-
-                // Scheduled Posting Filter: Time hone par hi dikhayega
-                if (now >= resDateTime) {
+                const resDateTime = new Date(`${dateStr} ${resTime}`);
+                
+                // Agar aaj ki date hai toh time filter lagao, warna purane date ka sab dikhao
+                if (!isToday || now >= resDateTime) {
                     let row = `<tr><td class="time-col">${resTime}</td>`;
                     const timeNums = data[resTime].numbers || [];
-                    for(let i=0; i<4; i++){ // Sirf 4 slots (A, B, C, D)
+                    for(let i=0; i<4; i++){
                         row += `<td>${timeNums[i] || '--'}</td>`;
                     }
                     row += `</tr>`;
                     resultBody.innerHTML += row;
                 }
             });
-
-            if(resultBody.innerHTML === "") {
-                 resultBody.innerHTML = "<tr><td colspan='5' style='padding:40px; color:#999; background:#fff;'>WAITING FOR TIME...</td></tr>";
-            }
         });
+    }
+
+    // ⏰ SMART COUNTDOWN
+    function startCountdown(targetTimeStr) {
+        if(timerInterval) clearInterval(timerInterval);
+        document.getElementById('nextTimeTarget').innerText = "TARGET: " + targetTimeStr;
+
+        timerInterval = setInterval(() => {
+            const now = new Date();
+            const targetDateTime = new Date(`${currentSystemDate} ${targetTimeStr}`).getTime();
+            const distance = targetDateTime - now.getTime();
+
+            if (distance < 0) {
+                clearInterval(timerInterval);
+                document.getElementById('countdownDisplay').innerText = "CHECK NOW!";
+                document.getElementById('countdownDisplay').style.color = "#39ff14";
+                document.getElementById('timerLabel').innerText = "RESULT IS OUT!";
+                return;
+            }
+
+            const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((distance % (1000 * 60)) / 1000);
+
+            document.getElementById('countdownDisplay').style.color = "#fff";
+            document.getElementById('timerLabel').innerText = "NEXT RESULT COUNTDOWN";
+            document.getElementById('countdownDisplay').innerText = 
+                (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+        }, 1000);
     }
 
     function syncAdminTime() {
         database.ref('app_settings/lucky777/nextResultTime').on('value', (snap) => {
-            document.getElementById('nextTimeDisplay').innerText = snap.val() || "WAITING...";
+            if(snap.val()) startCountdown(snap.val());
         });
     }
 
     function searchResult() {
         const dateInput = document.getElementById('searchDate').value;
-        if(!dateInput) return alert("Select Date!");
+        if(!dateInput) return alert("Please select a date!");
         startLiveUpdates(dateInput);
     }
 
     window.onload = () => {
-        startLiveUpdates();
+        updateSystemDate();
         syncAdminTime();
-        // Har 30 second mein live refresh bina page refresh kiye
+        
+        // 🔥 Har 1 minute mein check karega ki kya raat ke 12 baj gaye?
+        setInterval(updateSystemDate, 60000);
+        
+        // Har 30 second mein table live refresh karega
         setInterval(() => {
-            if(!document.getElementById('searchDate').value) startLiveUpdates();
+            const searchVal = document.getElementById('searchDate').value;
+            if(!searchVal) startLiveUpdates(currentSystemDate);
         }, 30000);
     };
 </script>
