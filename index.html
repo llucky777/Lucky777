@@ -3,10 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>LUCKY 777 - LIVE</title>
+    
+    <title>llucky777.github.io - LUCKY 777 LIVE RESULTS</title>
+    <meta name="description" content="LUCKY 777 Official Portal on llucky777.github.io. Check fast live results for ABCD slots daily. Accurate and reliable results portal.">
+    <meta name="keywords" content="llucky777.github.io, lucky 777, lucky777 github, lucky 777 results, results portal">
+    <meta name="author" content="llucky777">
+
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         body { background-color: #4a0000; margin: 0; padding: 0; font-family: Arial, sans-serif; display: flex; justify-content: center; }
         .main-wrapper { width: 100%; max-width: 500px; background-color: #7a0000; min-height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.5); padding-bottom: 50px; }
@@ -33,7 +39,7 @@
 <div class="main-wrapper">
     <div class="header">
         <h1 class="logo">LUCKY 777</h1>
-        <div style="color: #fff; font-size: 11px; margin-top: 5px; font-weight: bold;">LIVE RESULTS PORTAL</div>
+        <div style="color: #fff; font-size: 11px; margin-top: 5px; font-weight: bold;">llucky777.github.io</div>
     </div>
 
     <div class="date-bar" id="currentDayDisplay">TODAY: --/--/----</div>
@@ -65,7 +71,7 @@
     </div>
 
     <footer>
-        <p>&copy; 2026 LUCKY 777 OFFICIAL</p>
+        <p>&copy; 2026 llucky777.github.io | Official Portal</p>
     </footer>
 </div>
 
@@ -125,14 +131,12 @@
         });
     }
 
-    // 🔥 UPDATED COUNTDOWN: Use Admin Date + Time
     function startCountdown(targetTimeStr, targetDateStr) {
         if(timerInterval) clearInterval(timerInterval);
         document.getElementById('nextTimeTarget').innerText = "TARGET: " + targetDateStr + " " + targetTimeStr;
 
         timerInterval = setInterval(() => {
             const now = new Date();
-            
             let [time, modifier] = targetTimeStr.split(' ');
             let [hours, minutes] = time.split(':');
             if (hours === '12') hours = '00';
