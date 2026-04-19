@@ -82,13 +82,43 @@
         return Array.from(nums);
     }
 
+    // 🔥 Purane khali results bharne ke liye function
+    async function backfillOldResults() {
+        const oldDates = ["2026-04-16", "2026-04-17", "2026-04-18"];
+        for(let date of oldDates) {
+            const dateRef = database.ref(`results/${date}`);
+            const snap = await dateRef.once('value');
+            
+            // Agar us date par koi data nahi hai, toh bharo
+            if(!snap.exists()) {
+                console.log("Backfilling date: " + date);
+                for(let h = 9; h <= 20; h++) {
+                    for(let m = 0; m < 60; m += 15) {
+                        let ampm = h >= 12 ? "PM" : "AM";
+                        let hDisp = h % 12 || 12;
+                        let timeStr = `${hDisp < 10 ? '0'+hDisp : hDisp}:${m < 10 ? '0'+m : m} ${ampm}`;
+                        
+                        await dateRef.child(timeStr).set({
+                            numbers: generateLuckyNumbers(),
+                            timestamp: Date.now()
+                        });
+                    }
+                }
+                // 21:00 PM (Last slot)
+                await dateRef.child("09:00 PM").set({
+                    numbers: generateLuckyNumbers(),
+                    timestamp: Date.now()
+                });
+            }
+        }
+    }
+
     async function saveAutoResult(timeStr, dateStr) {
         const ref = database.ref(`results/${dateStr}/${timeStr}`);
         const snap = await ref.once('value');
         if(!snap.exists()) {
             const randomNums = generateLuckyNumbers();
             await ref.set({ numbers: randomNums, timestamp: Date.now() });
-            // 🔥 Naya result aate hi live update trigger karo
             startLiveUpdates(dateStr);
         }
     }
@@ -111,13 +141,11 @@
         const now = new Date();
         const hour = now.getHours();
         const min = now.getMinutes();
-
         if (hour >= 9 && hour < 21) {
             let nextM = Math.ceil((min + 1) / 15) * 15;
             let nextH = hour;
             if (nextM >= 60) { nextM = 0; nextH++; }
             if(nextH >= 21 && nextM > 0) { showClosed(); return; }
-
             const period = nextH >= 12 ? "PM" : "AM";
             let hDisp = nextH % 12 || 12;
             const target = `${hDisp < 10 ? '0'+hDisp : hDisp}:${nextM < 10 ? '0'+nextM : nextM} ${period}`;
@@ -137,33 +165,24 @@
     function startCountdown(targetTime, targetDate) {
         if(timerInterval) clearInterval(timerInterval);
         document.getElementById('nextTimeTarget').innerText = "TARGET: " + targetTime;
-
         timerInterval = setInterval(async () => {
             const now = new Date();
             let [time, mod] = targetTime.split(' ');
             let [h, m] = time.split(':').map(Number);
             if (h === 12) h = 0;
             if (mod === 'PM') h += 12;
-            
             const target = new Date(targetDate);
             target.setHours(h, m, 0, 0);
-            
             const diff = target.getTime() - now.getTime();
             const display = document.getElementById('countdownDisplay');
-
             if (diff <= 0) {
                 clearInterval(timerInterval);
                 display.innerText = "CHECK NOW!";
                 display.style.color = "#39ff14";
-                
-                // 🔥 Automatic result save
                 await saveAutoResult(targetTime, targetDate);
-
-                // 🔥 Wait and jump to next slot
                 setTimeout(() => { autoScheduler(); }, 5000);
                 return;
             }
-
             const hh = Math.floor(diff / 3600000);
             const mm = Math.floor((diff % 3600000) / 60000);
             const ss = Math.floor((diff % 60000) / 1000);
@@ -174,7 +193,6 @@
 
     function startLiveUpdates(dateStr) {
         const body = document.getElementById('resultBody');
-        // Firebase reference with .on('value') for REAL-TIME updates
         database.ref('results/' + dateStr).on('value', (snap) => {
             const data = snap.val();
             if(!data) { 
@@ -185,13 +203,11 @@
             const times = Object.keys(data).sort((a, b) => {
                 return new Date(dateStr + ' ' + a) - new Date(dateStr + ' ' + b);
             }).reverse();
-
             const now = new Date();
             times.forEach(t => {
                 let correctedTime = t.toUpperCase();
                 if (correctedTime.startsWith("12:00 AM")) correctedTime = "12:00 PM";
                 if (correctedTime.startsWith("12:30 AM")) correctedTime = "12:30 PM";
-
                 const resDateTime = new Date(`${dateStr} ${correctedTime}`);
                 if (dateStr !== currentSystemDate || now >= resDateTime) {
                     let row = `<tr><td class="time-col">${correctedTime}</td>`;
@@ -206,7 +222,6 @@
     function searchResult() {
         const d = document.getElementById('searchDate').value;
         if(!d) return alert("Select Date");
-        // Remove old listener and set search date
         database.ref('results/' + currentSystemDate).off();
         startLiveUpdates(d);
     }
@@ -214,7 +229,7 @@
     window.onload = () => {
         updateSystemDate();
         autoScheduler();
-        // Periodic check to ensure time is synced
+        backfillOldResults(); // 🔥 Pichle dino ka data bharna shuru karo
         setInterval(updateSystemDate, 30000);
     };
 </script>
