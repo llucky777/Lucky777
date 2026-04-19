@@ -82,33 +82,27 @@
         return Array.from(nums);
     }
 
-    // 🔥 Purane khali results bharne ke liye function
-    async function backfillOldResults() {
-        const oldDates = ["2026-04-16", "2026-04-17", "2026-04-18"];
-        for(let date of oldDates) {
-            const dateRef = database.ref(`results/${date}`);
-            const snap = await dateRef.once('value');
-            
-            // Agar us date par koi data nahi hai, toh bharo
-            if(!snap.exists()) {
-                console.log("Backfilling date: " + date);
-                for(let h = 9; h <= 20; h++) {
-                    for(let m = 0; m < 60; m += 15) {
-                        let ampm = h >= 12 ? "PM" : "AM";
-                        let hDisp = h % 12 || 12;
-                        let timeStr = `${hDisp < 10 ? '0'+hDisp : hDisp}:${m < 10 ? '0'+m : m} ${ampm}`;
-                        
-                        await dateRef.child(timeStr).set({
-                            numbers: generateLuckyNumbers(),
-                            timestamp: Date.now()
-                        });
+    // 🔥 MODIFIED: Pichle slots ko auto-check karne wala logic
+    async function checkAndFillMissingResults(dateStr) {
+        const now = new Date();
+        const currentH = now.getHours();
+        const currentM = now.getMinutes();
+
+        for(let h = 9; h <= 21; h++) {
+            for(let m = 0; m < 60; m += 15) {
+                // Agar ye time beet chuka hai
+                if(h < currentH || (h === currentH && m <= currentM)) {
+                    let ampm = h >= 12 ? "PM" : "AM";
+                    let hDisp = h % 12 || 12;
+                    let timeKey = `${hDisp < 10 ? '0'+hDisp : hDisp}:${m < 10 ? '0'+m : m} ${ampm}`;
+                    
+                    const ref = database.ref(`results/${dateStr}/${timeKey}`);
+                    const snap = await ref.once('value');
+                    if(!snap.exists()) {
+                        await ref.set({ numbers: generateLuckyNumbers(), timestamp: Date.now() });
+                        console.log("Auto-Filled missing slot: " + timeKey);
                     }
                 }
-                // 21:00 PM (Last slot)
-                await dateRef.child("09:00 PM").set({
-                    numbers: generateLuckyNumbers(),
-                    timestamp: Date.now()
-                });
             }
         }
     }
@@ -135,6 +129,8 @@
             document.getElementById('currentDayDisplay').innerText = "TODAY: " + now.toLocaleDateString('en-GB', options);
             startLiveUpdates(todayStr);
         }
+        // 🔥 Har minute pichle miss hue result check karo
+        checkAndFillMissingResults(currentSystemDate);
     }
 
     function autoScheduler() {
@@ -229,7 +225,6 @@
     window.onload = () => {
         updateSystemDate();
         autoScheduler();
-        backfillOldResults(); // 🔥 Pichle dino ka data bharna shuru karo
         setInterval(updateSystemDate, 30000);
     };
 </script>
