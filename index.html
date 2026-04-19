@@ -70,7 +70,37 @@
 
     let timerInterval;
     let currentSystemDate = "";
-    let isManualTimer = false;
+
+    // 🤖 SMART AUTO GENERATOR LOGIC
+    function generateLuckyNumbers() {
+        let nums = new Set();
+        while(nums.size < 4) {
+            let n;
+            // Rule: 20% chance for single digit (01-09), 80% for double digit (10-99)
+            if(Math.random() < 0.2) {
+                n = Math.floor(Math.random() * 9) + 1;
+            } else {
+                n = Math.floor(Math.random() * 90) + 10;
+            }
+            nums.add(n.toString().padStart(2, '0'));
+        }
+        return Array.from(nums);
+    }
+
+    // Save auto-generated result to Firebase
+    async function saveAutoResult(timeStr, dateStr) {
+        const ref = database.ref(`results/${dateStr}/${timeStr}`);
+        const snap = await ref.once('value');
+        // Only generate if result doesn't exist
+        if(!snap.exists()) {
+            const randomNums = generateLuckyNumbers();
+            await ref.set({
+                numbers: randomNums,
+                timestamp: Date.now()
+            });
+            console.log("Match Result Auto-Generated for: " + timeStr);
+        }
+    }
 
     function updateSystemDate() {
         const now = new Date();
@@ -87,22 +117,17 @@
     }
 
     function autoScheduler() {
-        if(isManualTimer) return;
         const now = new Date();
         const hour = now.getHours();
         const min = now.getMinutes();
 
-        // Strict 9 AM to 9 PM Window
+        // 9 AM to 9 PM Strict Window
         if (hour >= 9 && hour < 21) {
             let nextM = Math.ceil((min + 1) / 15) * 15;
             let nextH = hour;
             if (nextM >= 60) { nextM = 0; nextH++; }
             
-            // Automatic adjustment if next slot is 9 PM or later
-            if(nextH >= 21 && nextM > 0) {
-                showClosed();
-                return;
-            }
+            if(nextH >= 21 && nextM > 0) { showClosed(); return; }
 
             const period = nextH >= 12 ? "PM" : "AM";
             let hDisp = nextH % 12 || 12;
@@ -142,7 +167,12 @@
                 clearInterval(timerInterval);
                 display.innerText = "CHECK NOW!";
                 display.style.color = "#39ff14";
-                setTimeout(() => { if(!isManualTimer) autoScheduler(); }, 10000);
+                
+                // 🔥 THE MAGIC: Auto-generate result at this time
+                saveAutoResult(targetTime, targetDate);
+
+                // Wait 15 seconds then schedule next slot
+                setTimeout(() => { autoScheduler(); }, 15000);
                 return;
             }
 
@@ -152,19 +182,6 @@
             display.style.color = "#fff";
             display.innerText = `${hh<10?'0'+hh:hh}:${mm<10?'0'+mm:mm}:${ss<10?'0'+ss:ss}`;
         }, 1000);
-    }
-
-    function syncAdminTime() {
-        database.ref('app_settings/lucky777').on('value', (snap) => {
-            const val = snap.val();
-            if(val && val.nextResultTime) {
-                isManualTimer = true;
-                startCountdown(val.nextResultTime, val.nextResultDate || currentSystemDate);
-            } else {
-                isManualTimer = false;
-                autoScheduler();
-            }
-        });
     }
 
     function startLiveUpdates(dateStr) {
@@ -177,34 +194,20 @@
             }
             body.innerHTML = "";
             
-            // Sort times Latest to Oldest
+            // Latest results first
             const times = Object.keys(data).sort((a, b) => {
                 return new Date(dateStr + ' ' + a) - new Date(dateStr + ' ' + b);
             }).reverse();
 
             const now = new Date();
-
             times.forEach(t => {
-                // 🛠️ CLIENT ERROR CORRECTION (12:00 AM/12:30 AM to PM)
-                let tUpper = t.toUpperCase();
-                let correctedTime = tUpper;
-                if (tUpper.startsWith("12:00 AM")) correctedTime = "12:00 PM";
-                if (tUpper.startsWith("12:30 AM")) correctedTime = "12:30 PM";
+                let correctedTime = t.toUpperCase();
+                // Bug fix for noon
+                if (correctedTime.startsWith("12:00 AM")) correctedTime = "12:00 PM";
+                if (correctedTime.startsWith("12:30 AM")) correctedTime = "12:30 PM";
 
-                // Validation for 9 AM - 9 PM
-                let [timePart, ampm] = correctedTime.split(' ');
-                let [hrs, mins] = timePart.split(':').map(Number);
-                let checkHrs = hrs;
-                if (ampm === 'PM' && hrs < 12) checkHrs += 12;
-                if (ampm === 'AM' && hrs === 12) checkHrs = 0;
-
-                // 🚫 STRICT FILTER RULE
-                if (checkHrs < 9 || checkHrs > 21 || (checkHrs === 21 && mins > 0)) {
-                    return; // Don't show results outside 9am-9pm
-                }
-
-                // Show result only if time has passed
                 const resDateTime = new Date(`${dateStr} ${correctedTime}`);
+                // Security: Show only if time has passed
                 if (dateStr !== currentSystemDate || now >= resDateTime) {
                     let row = `<tr><td class="time-col">${correctedTime}</td>`;
                     const nums = data[t].numbers || [];
@@ -212,10 +215,6 @@
                     body.innerHTML += row + "</tr>";
                 }
             });
-
-            if(body.innerHTML === "") {
-                body.innerHTML = "<tr><td colspan='5' style='padding:40px; color:#999; background:#fff;'>WAITING FOR VALID RESULTS</td></tr>";
-            }
         });
     }
 
@@ -227,7 +226,7 @@
 
     window.onload = () => {
         updateSystemDate();
-        syncAdminTime();
+        autoScheduler();
         setInterval(updateSystemDate, 60000);
         setInterval(() => { if(!document.getElementById('searchDate').value) startLiveUpdates(currentSystemDate); }, 30000);
     };
