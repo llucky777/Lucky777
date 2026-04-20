@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>LUCKY 777 - INFINITE HISTORY</title>
+    <title>LUCKY 777 - FINAL SYNC PRO</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -76,28 +76,39 @@
         return Array.from(nums);
     }
 
-    // 🔥 INFINITE BACKFILL LOGIC
+    // 🔥 1. UPGRADED: FAST SYNC BACKFILL
     async function fulfillAnyDate(targetDate) {
         const dateRef = database.ref(`results/${targetDate}`);
         const snap = await dateRef.once('value');
+        const existingData = snap.val() || {};
         
-        // Agar data khali hai ya slots kam hain (9AM-9PM me total 49 slots hote hain)
-        if (!snap.exists() || Object.keys(snap.val()).length < 40) {
-            let updates = {};
-            for (let h = 9; h <= 21; h++) {
-                for (let m = 0; m < 60; m += 15) {
-                    if (h === 21 && m > 0) break; 
+        let updates = {};
+        const now = new Date();
+        const isToday = targetDate === currentSystemDate;
 
-                    let ampm = h >= 12 ? "PM" : "AM";
-                    let hDisp = h % 12 || 12;
-                    let timeKey = `${hDisp < 10 ? '0' + hDisp : hDisp}:${m < 10 ? '0' + m : m} ${ampm}`;
+        for (let h = 9; h <= 21; h++) {
+            for (let m = 0; m < 60; m += 15) {
+                if (h === 21 && m > 0) break; 
 
-                    if (!snap.child(timeKey).exists()) {
-                        updates[timeKey] = { numbers: generateLuckyNumbers(), timestamp: Date.now() };
-                    }
+                let ampm = h >= 12 ? "PM" : "AM";
+                let hDisp = h % 12 || 12;
+                let timeKey = `${hDisp < 10 ? '0' + hDisp : hDisp}:${m < 10 ? '0' + m : m} ${ampm}`;
+
+                // If today, only fill slots that have already passed
+                if (isToday) {
+                    let slotTime = new Date();
+                    slotTime.setHours(h, m, 0, 0);
+                    if (slotTime > now) continue; 
+                }
+
+                if (!existingData[timeKey]) {
+                    updates[timeKey] = { numbers: generateLuckyNumbers(), timestamp: Date.now() };
                 }
             }
-            if (Object.keys(updates).length > 0) await dateRef.update(updates);
+        }
+        if (Object.keys(updates).length > 0) {
+            await dateRef.update(updates);
+            console.log("Sync Complete: " + targetDate);
         }
     }
 
@@ -109,19 +120,19 @@
         }
     }
 
-    function updateSystemDate() {
+    // 🔥 2. Sequential Logic: Sync BEFORE Display
+    async function updateSystemDate() {
         const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const todayStr = `${year}-${month}-${day}`;
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        
         if (todayStr !== currentSystemDate) {
             currentSystemDate = todayStr;
             const options = { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' };
             document.getElementById('currentDayDisplay').innerText = "TODAY: " + now.toLocaleDateString('en-GB', options);
-            startLiveUpdates(todayStr);
         }
-        fulfillAnyDate(currentSystemDate);
+        
+        await fulfillAnyDate(currentSystemDate); // Force wait for sync
+        startLiveUpdates(currentSystemDate);
     }
 
     function autoScheduler() {
@@ -163,8 +174,7 @@
             const now = new Date();
             let [time, mod] = targetTime.split(' ');
             let [h, m] = time.split(':').map(Number);
-            if (h === 12) h = 0;
-            if (mod === 'PM') h += 12;
+            if (h === 12) h = 0; if (mod === 'PM') h += 12;
             const target = new Date(targetDate);
             target.setHours(h, m, 0, 0);
             const diff = target.getTime() - now.getTime();
@@ -224,7 +234,7 @@
         const d = document.getElementById('searchDate').value;
         if(!d) return alert("Select Date");
         const btn = document.querySelector('.search-btn');
-        btn.innerText = "WAIT..."; btn.disabled = true;
+        btn.innerText = "SYNCING..."; btn.disabled = true;
         await fulfillAnyDate(d);
         database.ref('results/' + currentSystemDate).off();
         startLiveUpdates(d);
@@ -232,12 +242,19 @@
     }
 
     window.onload = async () => {
-        updateSystemDate();
+        // Step 1: Initial Date Setup
+        const now = new Date();
+        currentSystemDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        
+        // Step 2: Sync and Load
+        await updateSystemDate(); 
         autoScheduler();
-        // Pre-fill yesterday for smooth navigation
+
+        // Step 3: Background tasks (Yesterday's Sync)
         let yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
         fulfillAnyDate(yesterday.toISOString().split('T')[0]);
-        setInterval(updateSystemDate, 30000);
+
+        setInterval(updateSystemDate, 60000);
     };
 </script>
 </body>
