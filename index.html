@@ -33,7 +33,6 @@
 <div class="main-wrapper">
     <div class="header">
         <h1 class="logo">LUCKY 777</h1>
-        <div style="color: #fff; font-size: 11px; margin-top: 5px; font-weight: bold;">llucky777.github.io</div>
     </div>
     <div class="date-bar" id="currentDayDisplay">TODAY: --/--/----</div>
     <div class="timer-section">
@@ -79,25 +78,37 @@
         return Array.from(nums);
     }
 
-    // 🔥 1. STRICT AUTO-FILL (9 AM to 9 PM Only)
+    // 🔥 1. SMART AUTO-FILL (Covers Today & Yesterday)
     async function checkAndFillMissingResults(dateStr) {
         const now = new Date();
         const curH = now.getHours();
         const curM = now.getMinutes();
 
-        for(let h = 9; h <= 21; h++) {
-            for(let m = 0; m < 60; m += 15) {
-                if(h === 21 && m > 0) break; // Stop at exactly 09:00 PM
+        // Yesterday's Date Calculation
+        let yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-                if(h < curH || (h === curH && m <= curM)) {
-                    let ampm = h >= 12 ? "PM" : "AM";
-                    let hDisp = h % 12 || 12;
-                    let timeKey = `${hDisp < 10 ? '0'+hDisp : hDisp}:${m < 10 ? '0'+m : m} ${ampm}`;
+        const datesToFill = [yesterdayStr, dateStr];
+
+        for (let targetDate of datesToFill) {
+            for (let h = 9; h <= 21; h++) {
+                for (let m = 0; m < 60; m += 15) {
+                    if (h === 21 && m > 0) break; // Strict 9:00 PM Cap
+
+                    // If it's today, check if time passed. If yesterday, check all slots.
+                    let isTimePassed = (targetDate === yesterdayStr) || (h < curH || (h === curH && m <= curM));
                     
-                    const ref = database.ref(`results/${dateStr}/${timeKey}`);
-                    const snap = await ref.once('value');
-                    if(!snap.exists()) {
-                        await ref.set({ numbers: generateLuckyNumbers(), timestamp: Date.now() });
+                    if (isTimePassed) {
+                        let ampm = h >= 12 ? "PM" : "AM";
+                        let hDisp = h % 12 || 12;
+                        let timeKey = `${hDisp < 10 ? '0' + hDisp : hDisp}:${m < 10 ? '0' + m : m} ${ampm}`;
+
+                        const ref = database.ref(`results/${targetDate}/${timeKey}`);
+                        const snap = await ref.once('value');
+                        if (!snap.exists()) {
+                            await ref.set({ numbers: generateLuckyNumbers(), timestamp: Date.now() });
+                        }
                     }
                 }
             }
@@ -128,7 +139,6 @@
         checkAndFillMissingResults(currentSystemDate);
     }
 
-    // 🔥 2. STRICT SCHEDULER
     function autoScheduler() {
         const now = new Date();
         const hour = now.getHours();
@@ -146,8 +156,6 @@
             if (nextM >= 60) { nextM = 0; nextH++; }
             
             if(nextH === 21 && nextM > 0) { showClosed(); return; }
-            if(nextH > 21) { showClosed(); return; }
-
             const period = nextH >= 12 ? "PM" : "AM";
             let hDisp = nextH % 12 || 12;
             const target = `${hDisp < 10 ? '0'+hDisp : hDisp}:${nextM < 10 ? '0'+nextM : nextM} ${period}`;
@@ -193,7 +201,6 @@
         }, 1000);
     }
 
-    // 🔥 3. STRICT FILTERING (Removes old bad data from view)
     function startLiveUpdates(dateStr) {
         const body = document.getElementById('resultBody');
         database.ref('results/' + dateStr).on('value', (snap) => {
@@ -201,7 +208,6 @@
             if(!data) { body.innerHTML = "<tr><td colspan='5' style='padding:40px; color:#999; background:#fff;'>NO RESULTS</td></tr>"; return; }
             body.innerHTML = "";
             
-            // Fixed sorting logic
             const times = Object.keys(data).sort((a, b) => {
                 const parseTime = (t) => {
                     let [time, mod] = t.split(' ');
@@ -219,15 +225,12 @@
                 if (correctedTime.startsWith("12:00 AM")) correctedTime = "12:00 PM";
                 if (correctedTime.startsWith("12:30 AM")) correctedTime = "12:30 PM";
 
-                // 🛑 CRITICAL FILTER: Hidden if time > 9:00 PM
                 let [timePart, ampm] = correctedTime.split(' ');
                 let [hrs, mins] = timePart.split(':').map(Number);
                 let checkH = (ampm === 'PM' && hrs < 12) ? hrs + 12 : (ampm === 'AM' && hrs === 12) ? 0 : hrs;
                 
-                // Agar raat ke 9 baje (21:00) ke baad ka koi bhi minute hai, toh mat dikhao
-                if(checkH > 21 || (checkH === 21 && mins > 0)) return;
-                // Agar subah 9 baje se pehle ka hai, toh mat dikhao
-                if(checkH < 9) return;
+                // Hide results outside 9 AM - 9 PM
+                if(checkH > 21 || (checkH === 21 && mins > 0) || checkH < 9) return;
 
                 const resDateTime = new Date(`${dateStr} ${correctedTime}`);
                 if (dateStr !== currentSystemDate || now >= resDateTime) {
