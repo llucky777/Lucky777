@@ -12,7 +12,7 @@
         .main-wrapper { width: 100%; max-width: 500px; background-color: #7a0000; min-height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.5); padding-bottom: 50px; }
         .header { background: #000; padding: 20px 10px; text-align: center; border-bottom: 4px solid #ffd700; }
         .logo { font-size: 35px; color: #ffd700; font-weight: 900; margin: 0; text-shadow: 2px 2px #000; letter-spacing: 2px; }
-        .date-bar { background: #ffd700; color: #000; padding: 10px; text-align: center; font-weight: bold; font-size: 16px; text-transform: uppercase; border-bottom: 2px solid #000; }
+        .date-bar { background: #ffd700; color: #000; padding: 10px; text-align: center; font-weight: bold; font-size: 16px; text-transform: uppercase; border-bottom: 2px solid #000; min-height: 20px; }
         .timer-section { background: #111; margin: 15px; padding: 20px; border: 2px solid #ffd700; border-radius: 8px; text-align: center; }
         .next-label { color: #ffd700; font-size: 13px; font-weight: bold; margin-bottom: 10px; display: block; }
         #countdownDisplay { color: #fff; font-size: 32px; font-weight: 900; font-family: 'Courier New', monospace; display: block; }
@@ -32,7 +32,7 @@
 
 <div class="main-wrapper">
     <div class="header"><h1 class="logo">LUCKY 777</h1></div>
-    <div class="date-bar" id="currentDayDisplay">TODAY: --/--/----</div>
+    <div class="date-bar" id="currentDayDisplay">TODAY: LOADING...</div>
     <div class="timer-section">
         <span class="next-label" id="timerLabel">NEXT RESULT COUNTDOWN</span>
         <span id="countdownDisplay">00:00:00</span>
@@ -76,7 +76,6 @@
         return Array.from(nums);
     }
 
-    // 🔥 1. UPGRADED: FAST SYNC BACKFILL
     async function fulfillAnyDate(targetDate) {
         const dateRef = database.ref(`results/${targetDate}`);
         const snap = await dateRef.once('value');
@@ -84,17 +83,15 @@
         
         let updates = {};
         const now = new Date();
-        const isToday = targetDate === currentSystemDate;
+        const isToday = targetDate === getTodayString();
 
         for (let h = 9; h <= 21; h++) {
             for (let m = 0; m < 60; m += 15) {
                 if (h === 21 && m > 0) break; 
-
                 let ampm = h >= 12 ? "PM" : "AM";
                 let hDisp = h % 12 || 12;
                 let timeKey = `${hDisp < 10 ? '0' + hDisp : hDisp}:${m < 10 ? '0' + m : m} ${ampm}`;
 
-                // If today, only fill slots that have already passed
                 if (isToday) {
                     let slotTime = new Date();
                     slotTime.setHours(h, m, 0, 0);
@@ -106,10 +103,12 @@
                 }
             }
         }
-        if (Object.keys(updates).length > 0) {
-            await dateRef.update(updates);
-            console.log("Sync Complete: " + targetDate);
-        }
+        if (Object.keys(updates).length > 0) await dateRef.update(updates);
+    }
+
+    function getTodayString() {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     }
 
     async function saveAutoResult(timeStr, dateStr) {
@@ -120,18 +119,19 @@
         }
     }
 
-    // 🔥 2. Sequential Logic: Sync BEFORE Display
     async function updateSystemDate() {
         const now = new Date();
-        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const todayStr = getTodayString();
+        
+        // 🛠️ FIX: Always update the display text
+        const options = { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' };
+        document.getElementById('currentDayDisplay').innerText = "TODAY: " + now.toLocaleDateString('en-GB', options);
         
         if (todayStr !== currentSystemDate) {
             currentSystemDate = todayStr;
-            const options = { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' };
-            document.getElementById('currentDayDisplay').innerText = "TODAY: " + now.toLocaleDateString('en-GB', options);
         }
         
-        await fulfillAnyDate(currentSystemDate); // Force wait for sync
+        await fulfillAnyDate(currentSystemDate);
         startLiveUpdates(currentSystemDate);
     }
 
@@ -242,18 +242,11 @@
     }
 
     window.onload = async () => {
-        // Step 1: Initial Date Setup
-        const now = new Date();
-        currentSystemDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        
-        // Step 2: Sync and Load
+        currentSystemDate = getTodayString();
         await updateSystemDate(); 
         autoScheduler();
-
-        // Step 3: Background tasks (Yesterday's Sync)
         let yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
         fulfillAnyDate(yesterday.toISOString().split('T')[0]);
-
         setInterval(updateSystemDate, 60000);
     };
 </script>
