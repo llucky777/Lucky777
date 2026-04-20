@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>LUCKY 777 - STRICT AUTO LIVE</title>
+    <title>LUCKY 777 - FINAL AUTO FIX</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -79,7 +79,7 @@
         return Array.from(nums);
     }
 
-    // 🔥 FIXED: Strict 9 AM to 9 PM Check & Fill
+    // 🔥 1. STRICT AUTO-FILL (9 AM to 9 PM Only)
     async function checkAndFillMissingResults(dateStr) {
         const now = new Date();
         const curH = now.getHours();
@@ -87,10 +87,8 @@
 
         for(let h = 9; h <= 21; h++) {
             for(let m = 0; m < 60; m += 15) {
-                // 🛑 STRICT LIMIT: Do NOT generate anything after 09:00 PM
-                if(h === 21 && m > 0) break;
+                if(h === 21 && m > 0) break; // Stop at exactly 09:00 PM
 
-                // Agar ye slot beet chuka hai
                 if(h < curH || (h === curH && m <= curM)) {
                     let ampm = h >= 12 ? "PM" : "AM";
                     let hDisp = h % 12 || 12;
@@ -130,7 +128,7 @@
         checkAndFillMissingResults(currentSystemDate);
     }
 
-    // 🔥 FIXED: Strict Scheduling (9 AM to 9 PM Only)
+    // 🔥 2. STRICT SCHEDULER
     function autoScheduler() {
         const now = new Date();
         const hour = now.getHours();
@@ -147,7 +145,6 @@
             let nextH = hour;
             if (nextM >= 60) { nextM = 0; nextH++; }
             
-            // 🛑 Strict check to not exceed 9 PM
             if(nextH === 21 && nextM > 0) { showClosed(); return; }
             if(nextH > 21) { showClosed(); return; }
 
@@ -196,24 +193,41 @@
         }, 1000);
     }
 
+    // 🔥 3. STRICT FILTERING (Removes old bad data from view)
     function startLiveUpdates(dateStr) {
         const body = document.getElementById('resultBody');
         database.ref('results/' + dateStr).on('value', (snap) => {
             const data = snap.val();
             if(!data) { body.innerHTML = "<tr><td colspan='5' style='padding:40px; color:#999; background:#fff;'>NO RESULTS</td></tr>"; return; }
             body.innerHTML = "";
-            const times = Object.keys(data).sort((a, b) => new Date(dateStr + ' ' + a) - new Date(dateStr + ' ' + b)).reverse();
+            
+            // Fixed sorting logic
+            const times = Object.keys(data).sort((a, b) => {
+                const parseTime = (t) => {
+                    let [time, mod] = t.split(' ');
+                    let [h, m] = time.split(':').map(Number);
+                    if(h === 12) h = 0;
+                    if(mod === 'PM') h += 12;
+                    return h * 60 + m;
+                };
+                return parseTime(b) - parseTime(a);
+            });
+
             const now = new Date();
             times.forEach(t => {
                 let correctedTime = t.toUpperCase();
                 if (correctedTime.startsWith("12:00 AM")) correctedTime = "12:00 PM";
                 if (correctedTime.startsWith("12:30 AM")) correctedTime = "12:30 PM";
 
-                // 🛑 FILTER: Do not show anything outside 9AM-9PM
+                // 🛑 CRITICAL FILTER: Hidden if time > 9:00 PM
                 let [timePart, ampm] = correctedTime.split(' ');
                 let [hrs, mins] = timePart.split(':').map(Number);
                 let checkH = (ampm === 'PM' && hrs < 12) ? hrs + 12 : (ampm === 'AM' && hrs === 12) ? 0 : hrs;
-                if(checkH < 9 || checkH > 21 || (checkH === 21 && mins > 0)) return;
+                
+                // Agar raat ke 9 baje (21:00) ke baad ka koi bhi minute hai, toh mat dikhao
+                if(checkH > 21 || (checkH === 21 && mins > 0)) return;
+                // Agar subah 9 baje se pehle ka hai, toh mat dikhao
+                if(checkH < 9) return;
 
                 const resDateTime = new Date(`${dateStr} ${correctedTime}`);
                 if (dateStr !== currentSystemDate || now >= resDateTime) {
