@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <meta name="google-site-verification" content="aa616cbe8a69b1ed" />
-    <title>llucky777.github.io - LUCKY 777 LIVE</title>
+    <title>LUCKY 777 - STRICT AUTO LIVE</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -74,24 +73,25 @@
     function generateLuckyNumbers() {
         let nums = new Set();
         while(nums.size < 4) {
-            let n;
-            if(Math.random() < 0.2) { n = Math.floor(Math.random() * 9) + 1; } 
-            else { n = Math.floor(Math.random() * 90) + 10; }
+            let n = (Math.random() < 0.2) ? Math.floor(Math.random() * 9) + 1 : Math.floor(Math.random() * 90) + 10;
             nums.add(n.toString().padStart(2, '0'));
         }
         return Array.from(nums);
     }
 
-    // 🔥 MODIFIED: Pichle slots ko auto-check karne wala logic
+    // 🔥 FIXED: Strict 9 AM to 9 PM Check & Fill
     async function checkAndFillMissingResults(dateStr) {
         const now = new Date();
-        const currentH = now.getHours();
-        const currentM = now.getMinutes();
+        const curH = now.getHours();
+        const curM = now.getMinutes();
 
         for(let h = 9; h <= 21; h++) {
             for(let m = 0; m < 60; m += 15) {
-                // Agar ye time beet chuka hai
-                if(h < currentH || (h === currentH && m <= currentM)) {
+                // 🛑 STRICT LIMIT: Do NOT generate anything after 09:00 PM
+                if(h === 21 && m > 0) break;
+
+                // Agar ye slot beet chuka hai
+                if(h < curH || (h === curH && m <= curM)) {
                     let ampm = h >= 12 ? "PM" : "AM";
                     let hDisp = h % 12 || 12;
                     let timeKey = `${hDisp < 10 ? '0'+hDisp : hDisp}:${m < 10 ? '0'+m : m} ${ampm}`;
@@ -100,7 +100,6 @@
                     const snap = await ref.once('value');
                     if(!snap.exists()) {
                         await ref.set({ numbers: generateLuckyNumbers(), timestamp: Date.now() });
-                        console.log("Auto-Filled missing slot: " + timeKey);
                     }
                 }
             }
@@ -111,8 +110,7 @@
         const ref = database.ref(`results/${dateStr}/${timeStr}`);
         const snap = await ref.once('value');
         if(!snap.exists()) {
-            const randomNums = generateLuckyNumbers();
-            await ref.set({ numbers: randomNums, timestamp: Date.now() });
+            await ref.set({ numbers: generateLuckyNumbers(), timestamp: Date.now() });
             startLiveUpdates(dateStr);
         }
     }
@@ -129,19 +127,30 @@
             document.getElementById('currentDayDisplay').innerText = "TODAY: " + now.toLocaleDateString('en-GB', options);
             startLiveUpdates(todayStr);
         }
-        // 🔥 Har minute pichle miss hue result check karo
         checkAndFillMissingResults(currentSystemDate);
     }
 
+    // 🔥 FIXED: Strict Scheduling (9 AM to 9 PM Only)
     function autoScheduler() {
         const now = new Date();
         const hour = now.getHours();
         const min = now.getMinutes();
+
+        if (hour < 9) {
+            document.getElementById('countdownDisplay').innerText = "OPENS AT 9AM";
+            document.getElementById('nextTimeTarget').innerText = "TARGET: 09:00 AM";
+            return;
+        }
+
         if (hour >= 9 && hour < 21) {
             let nextM = Math.ceil((min + 1) / 15) * 15;
             let nextH = hour;
             if (nextM >= 60) { nextM = 0; nextH++; }
-            if(nextH >= 21 && nextM > 0) { showClosed(); return; }
+            
+            // 🛑 Strict check to not exceed 9 PM
+            if(nextH === 21 && nextM > 0) { showClosed(); return; }
+            if(nextH > 21) { showClosed(); return; }
+
             const period = nextH >= 12 ? "PM" : "AM";
             let hDisp = nextH % 12 || 12;
             const target = `${hDisp < 10 ? '0'+hDisp : hDisp}:${nextM < 10 ? '0'+nextM : nextM} ${period}`;
@@ -191,19 +200,21 @@
         const body = document.getElementById('resultBody');
         database.ref('results/' + dateStr).on('value', (snap) => {
             const data = snap.val();
-            if(!data) { 
-                body.innerHTML = "<tr><td colspan='5' style='padding:40px; color:#999; background:#fff;'>NO RESULTS</td></tr>"; 
-                return; 
-            }
+            if(!data) { body.innerHTML = "<tr><td colspan='5' style='padding:40px; color:#999; background:#fff;'>NO RESULTS</td></tr>"; return; }
             body.innerHTML = "";
-            const times = Object.keys(data).sort((a, b) => {
-                return new Date(dateStr + ' ' + a) - new Date(dateStr + ' ' + b);
-            }).reverse();
+            const times = Object.keys(data).sort((a, b) => new Date(dateStr + ' ' + a) - new Date(dateStr + ' ' + b)).reverse();
             const now = new Date();
             times.forEach(t => {
                 let correctedTime = t.toUpperCase();
                 if (correctedTime.startsWith("12:00 AM")) correctedTime = "12:00 PM";
                 if (correctedTime.startsWith("12:30 AM")) correctedTime = "12:30 PM";
+
+                // 🛑 FILTER: Do not show anything outside 9AM-9PM
+                let [timePart, ampm] = correctedTime.split(' ');
+                let [hrs, mins] = timePart.split(':').map(Number);
+                let checkH = (ampm === 'PM' && hrs < 12) ? hrs + 12 : (ampm === 'AM' && hrs === 12) ? 0 : hrs;
+                if(checkH < 9 || checkH > 21 || (checkH === 21 && mins > 0)) return;
+
                 const resDateTime = new Date(`${dateStr} ${correctedTime}`);
                 if (dateStr !== currentSystemDate || now >= resDateTime) {
                     let row = `<tr><td class="time-col">${correctedTime}</td>`;
