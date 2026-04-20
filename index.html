@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>LUCKY 777 - FINAL AUTO FIX</title>
+    <title>LUCKY 777 - INFINITE HISTORY</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -31,9 +31,7 @@
 <body>
 
 <div class="main-wrapper">
-    <div class="header">
-        <h1 class="logo">LUCKY 777</h1>
-    </div>
+    <div class="header"><h1 class="logo">LUCKY 777</h1></div>
     <div class="date-bar" id="currentDayDisplay">TODAY: --/--/----</div>
     <div class="timer-section">
         <span class="next-label" id="timerLabel">NEXT RESULT COUNTDOWN</span>
@@ -78,40 +76,28 @@
         return Array.from(nums);
     }
 
-    // 🔥 1. SMART AUTO-FILL (Covers Today & Yesterday)
-    async function checkAndFillMissingResults(dateStr) {
-        const now = new Date();
-        const curH = now.getHours();
-        const curM = now.getMinutes();
-
-        // Yesterday's Date Calculation
-        let yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-        const datesToFill = [yesterdayStr, dateStr];
-
-        for (let targetDate of datesToFill) {
+    // 🔥 INFINITE BACKFILL LOGIC
+    async function fulfillAnyDate(targetDate) {
+        const dateRef = database.ref(`results/${targetDate}`);
+        const snap = await dateRef.once('value');
+        
+        // Agar data khali hai ya slots kam hain (9AM-9PM me total 49 slots hote hain)
+        if (!snap.exists() || Object.keys(snap.val()).length < 40) {
+            let updates = {};
             for (let h = 9; h <= 21; h++) {
                 for (let m = 0; m < 60; m += 15) {
-                    if (h === 21 && m > 0) break; // Strict 9:00 PM Cap
+                    if (h === 21 && m > 0) break; 
 
-                    // If it's today, check if time passed. If yesterday, check all slots.
-                    let isTimePassed = (targetDate === yesterdayStr) || (h < curH || (h === curH && m <= curM));
-                    
-                    if (isTimePassed) {
-                        let ampm = h >= 12 ? "PM" : "AM";
-                        let hDisp = h % 12 || 12;
-                        let timeKey = `${hDisp < 10 ? '0' + hDisp : hDisp}:${m < 10 ? '0' + m : m} ${ampm}`;
+                    let ampm = h >= 12 ? "PM" : "AM";
+                    let hDisp = h % 12 || 12;
+                    let timeKey = `${hDisp < 10 ? '0' + hDisp : hDisp}:${m < 10 ? '0' + m : m} ${ampm}`;
 
-                        const ref = database.ref(`results/${targetDate}/${timeKey}`);
-                        const snap = await ref.once('value');
-                        if (!snap.exists()) {
-                            await ref.set({ numbers: generateLuckyNumbers(), timestamp: Date.now() });
-                        }
+                    if (!snap.child(timeKey).exists()) {
+                        updates[timeKey] = { numbers: generateLuckyNumbers(), timestamp: Date.now() };
                     }
                 }
             }
+            if (Object.keys(updates).length > 0) await dateRef.update(updates);
         }
     }
 
@@ -120,7 +106,6 @@
         const snap = await ref.once('value');
         if(!snap.exists()) {
             await ref.set({ numbers: generateLuckyNumbers(), timestamp: Date.now() });
-            startLiveUpdates(dateStr);
         }
     }
 
@@ -136,7 +121,7 @@
             document.getElementById('currentDayDisplay').innerText = "TODAY: " + now.toLocaleDateString('en-GB', options);
             startLiveUpdates(todayStr);
         }
-        checkAndFillMissingResults(currentSystemDate);
+        fulfillAnyDate(currentSystemDate);
     }
 
     function autoScheduler() {
@@ -145,8 +130,7 @@
         const min = now.getMinutes();
 
         if (hour < 9) {
-            document.getElementById('countdownDisplay').innerText = "OPENS AT 9AM";
-            document.getElementById('nextTimeTarget').innerText = "TARGET: 09:00 AM";
+            showClosed("OPENS AT 9AM");
             return;
         }
 
@@ -154,8 +138,8 @@
             let nextM = Math.ceil((min + 1) / 15) * 15;
             let nextH = hour;
             if (nextM >= 60) { nextM = 0; nextH++; }
-            
             if(nextH === 21 && nextM > 0) { showClosed(); return; }
+
             const period = nextH >= 12 ? "PM" : "AM";
             let hDisp = nextH % 12 || 12;
             const target = `${hDisp < 10 ? '0'+hDisp : hDisp}:${nextM < 10 ? '0'+nextM : nextM} ${period}`;
@@ -165,9 +149,9 @@
         }
     }
 
-    function showClosed() {
+    function showClosed(msg = "CLOSED") {
         const display = document.getElementById('countdownDisplay');
-        display.innerText = "CLOSED";
+        display.innerText = msg;
         display.style.color = "#ff3131";
         document.getElementById('nextTimeTarget').innerText = "OPENS AT 09:00 AM";
     }
@@ -197,7 +181,6 @@
             const mm = Math.floor((diff % 3600000) / 60000);
             const ss = Math.floor((diff % 60000) / 1000);
             display.innerText = `${hh<10?'0'+hh:hh}:${mm<10?'0'+mm:mm}:${ss<10?'0'+ss:ss}`;
-            display.style.color = "#fff";
         }, 1000);
     }
 
@@ -209,14 +192,11 @@
             body.innerHTML = "";
             
             const times = Object.keys(data).sort((a, b) => {
-                const parseTime = (t) => {
-                    let [time, mod] = t.split(' ');
-                    let [h, m] = time.split(':').map(Number);
-                    if(h === 12) h = 0;
-                    if(mod === 'PM') h += 12;
-                    return h * 60 + m;
+                const parseT = (t) => {
+                    let [tm, md] = t.split(' '); let [h, m] = tm.split(':').map(Number);
+                    if(h === 12) h = 0; if(md === 'PM') h += 12; return h * 60 + m;
                 };
-                return parseTime(b) - parseTime(a);
+                return parseT(b) - parseT(a);
             });
 
             const now = new Date();
@@ -225,11 +205,8 @@
                 if (correctedTime.startsWith("12:00 AM")) correctedTime = "12:00 PM";
                 if (correctedTime.startsWith("12:30 AM")) correctedTime = "12:30 PM";
 
-                let [timePart, ampm] = correctedTime.split(' ');
-                let [hrs, mins] = timePart.split(':').map(Number);
+                let [timePart, ampm] = correctedTime.split(' '); let [hrs, mins] = timePart.split(':').map(Number);
                 let checkH = (ampm === 'PM' && hrs < 12) ? hrs + 12 : (ampm === 'AM' && hrs === 12) ? 0 : hrs;
-                
-                // Hide results outside 9 AM - 9 PM
                 if(checkH > 21 || (checkH === 21 && mins > 0) || checkH < 9) return;
 
                 const resDateTime = new Date(`${dateStr} ${correctedTime}`);
@@ -243,16 +220,23 @@
         });
     }
 
-    function searchResult() {
+    async function searchResult() {
         const d = document.getElementById('searchDate').value;
         if(!d) return alert("Select Date");
+        const btn = document.querySelector('.search-btn');
+        btn.innerText = "WAIT..."; btn.disabled = true;
+        await fulfillAnyDate(d);
         database.ref('results/' + currentSystemDate).off();
         startLiveUpdates(d);
+        btn.innerText = "SEARCH"; btn.disabled = false;
     }
 
-    window.onload = () => {
+    window.onload = async () => {
         updateSystemDate();
         autoScheduler();
+        // Pre-fill yesterday for smooth navigation
+        let yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+        fulfillAnyDate(yesterday.toISOString().split('T')[0]);
         setInterval(updateSystemDate, 30000);
     };
 </script>
