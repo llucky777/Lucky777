@@ -68,12 +68,12 @@
     let currentSystemDate = "";
 
     function generateLuckyNumbers() {
-        let nums = new Set();
-        while(nums.size < 4) {
-            let n = (Math.random() < 0.2) ? Math.floor(Math.random() * 9) + 1 : Math.floor(Math.random() * 90) + 10;
-            nums.add(n.toString().padStart(2, '0'));
+        let nums = [];
+        for(let i=0; i<4; i++) {
+            let n = Math.floor(Math.random() * 90) + 10; 
+            nums.push(n.toString());
         }
-        return Array.from(nums);
+        return nums;
     }
 
     async function fulfillAnyDate(targetDate) {
@@ -92,13 +92,10 @@
                 let hDisp = h % 12 || 12;
                 let timeKey = `${hDisp < 10 ? '0' + hDisp : hDisp}:${m < 10 ? '0' + m : m} ${ampm}`;
 
-                if (isToday) {
-                    let slotTime = new Date();
-                    slotTime.setHours(h, m, 0, 0);
-                    if (slotTime > now) continue; 
-                }
+                let slotTime = new Date(targetDate);
+                slotTime.setHours(h, m, 0, 0);
 
-                if (!existingData[timeKey]) {
+                if (slotTime <= now && !existingData[timeKey]) {
                     updates[timeKey] = { numbers: generateLuckyNumbers(), timestamp: Date.now() };
                 }
             }
@@ -113,26 +110,26 @@
 
     async function saveAutoResult(timeStr, dateStr) {
         const ref = database.ref(`results/${dateStr}/${timeStr}`);
-        const snap = await ref.once('value');
-        if(!snap.exists()) {
-            await ref.set({ numbers: generateLuckyNumbers(), timestamp: Date.now() });
-        }
+        await ref.transaction((currentData) => {
+            if (currentData === null) {
+                return { numbers: generateLuckyNumbers(), timestamp: Date.now() };
+            } else {
+                return; 
+            }
+        });
     }
 
     async function updateSystemDate() {
         const now = new Date();
         const todayStr = getTodayString();
-        
-        // 🛠️ FIX: Always update the display text
         const options = { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' };
         document.getElementById('currentDayDisplay').innerText = "TODAY: " + now.toLocaleDateString('en-GB', options);
         
         if (todayStr !== currentSystemDate) {
             currentSystemDate = todayStr;
+            await fulfillAnyDate(currentSystemDate);
+            startLiveUpdates(currentSystemDate);
         }
-        
-        await fulfillAnyDate(currentSystemDate);
-        startLiveUpdates(currentSystemDate);
     }
 
     function autoScheduler() {
@@ -140,24 +137,19 @@
         const hour = now.getHours();
         const min = now.getMinutes();
 
-        if (hour < 9) {
-            showClosed("OPENS AT 9AM");
-            return;
-        }
+        if (hour < 9) { showClosed("OPENS AT 9AM"); return; }
+        if (hour >= 21 && min > 0) { showClosed(); return; }
 
-        if (hour >= 9 && hour < 21) {
-            let nextM = Math.ceil((min + 1) / 15) * 15;
-            let nextH = hour;
-            if (nextM >= 60) { nextM = 0; nextH++; }
-            if(nextH === 21 && nextM > 0) { showClosed(); return; }
-
-            const period = nextH >= 12 ? "PM" : "AM";
-            let hDisp = nextH % 12 || 12;
-            const target = `${hDisp < 10 ? '0'+hDisp : hDisp}:${nextM < 10 ? '0'+nextM : nextM} ${period}`;
-            startCountdown(target, currentSystemDate);
-        } else {
-            showClosed();
-        }
+        let nextM = Math.ceil((min + 1) / 15) * 15;
+        let nextH = hour;
+        if (nextM >= 60) { nextM = 0; nextH++; }
+        
+        const period = nextH >= 12 ? "PM" : "AM";
+        let hDisp = nextH % 12 || 12;
+        const target = `${hDisp < 10 ? '0'+hDisp : hDisp}:${nextM < 10 ? '0'+nextM : nextM} ${period}`;
+        
+        if (nextH > 21 || (nextH === 21 && nextM > 0)) { showClosed(); } 
+        else { startCountdown(target, currentSystemDate); }
     }
 
     function showClosed(msg = "CLOSED") {
@@ -175,16 +167,18 @@
             let [time, mod] = targetTime.split(' ');
             let [h, m] = time.split(':').map(Number);
             if (h === 12) h = 0; if (mod === 'PM') h += 12;
-            const target = new Date(targetDate);
+            const target = new Date();
             target.setHours(h, m, 0, 0);
+
             const diff = target.getTime() - now.getTime();
             const display = document.getElementById('countdownDisplay');
+
             if (diff <= 0) {
                 clearInterval(timerInterval);
                 display.innerText = "CHECK NOW!";
                 display.style.color = "#39ff14";
                 await saveAutoResult(targetTime, targetDate);
-                setTimeout(() => { autoScheduler(); }, 5000);
+                setTimeout(() => { autoScheduler(); }, 3000);
                 return;
             }
             const hh = Math.floor(diff / 3600000);
@@ -211,17 +205,9 @@
 
             const now = new Date();
             times.forEach(t => {
-                let correctedTime = t.toUpperCase();
-                if (correctedTime.startsWith("12:00 AM")) correctedTime = "12:00 PM";
-                if (correctedTime.startsWith("12:30 AM")) correctedTime = "12:30 PM";
-
-                let [timePart, ampm] = correctedTime.split(' '); let [hrs, mins] = timePart.split(':').map(Number);
-                let checkH = (ampm === 'PM' && hrs < 12) ? hrs + 12 : (ampm === 'AM' && hrs === 12) ? 0 : hrs;
-                if(checkH > 21 || (checkH === 21 && mins > 0) || checkH < 9) return;
-
-                const resDateTime = new Date(`${dateStr} ${correctedTime}`);
-                if (dateStr !== currentSystemDate || now >= resDateTime) {
-                    let row = `<tr><td class="time-col">${correctedTime}</td>`;
+                const resDateTime = new Date(`${dateStr} ${t}`);
+                if (dateStr !== getTodayString() || now >= resDateTime) {
+                    let row = `<tr><td class="time-col">${t}</td>`;
                     const nums = data[t].numbers || [];
                     for(let i=0; i<4; i++) row += `<td>${nums[i] || '--'}</td>`;
                     body.innerHTML += row + "</tr>";
@@ -242,12 +228,11 @@
     }
 
     window.onload = async () => {
-        currentSystemDate = getTodayString();
         await updateSystemDate(); 
         autoScheduler();
         let yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
         fulfillAnyDate(yesterday.toISOString().split('T')[0]);
-        setInterval(updateSystemDate, 60000);
+        setInterval(updateSystemDate, 30000);
     };
 </script>
 </body>
